@@ -1,21 +1,22 @@
-import { useState } from "react";
-import { useRouter } from "next/router";
-import Head from "next/head";
-import { Octokit } from "octokit";
-import { Endpoints, RequestError } from "@octokit/types";
-import Link from "next/link";
-import { parseISO, format } from "date-fns";
 import { GetServerSideProps, InferGetServerSidePropsType } from "next";
+import Head from "next/head";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import { useState } from "react";
 
-type Commits =
-  Endpoints["GET /repos/{owner}/{repo}/commits"]["response"]["data"];
+import { Endpoints, RequestError } from "@octokit/types";
+import { format, parseISO } from "date-fns";
 
 export default function UsernameReponame(
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) {
-  const [commits] = useState<Commits>(props.results.data || []);
   const router = useRouter();
-  const url = `/${router.query.user}/${router.query.repo}`;
+  const { user, repo } = router.query;
+  const url = `/${user}/${repo}`;
+
+  const [commits, setCommits] = useState(props.results.data || []);
+  const [page, setPage] = useState(1);
+
   return (
     <div>
       <Head>
@@ -67,13 +68,15 @@ export default function UsernameReponame(
           <button
             className="bg-[#21585e] text-white mx-auto mt-5 px-5 py-2"
             onClick={() => {
-              const next = (props.results.headers.link || "")
-                .split(",")
-                .map((str: string) => {
-                  const match = str.match(/<(.+)>/i);
-                  return match ? match[1] : "";
-                })[0];
-              console.log("next", next);
+              const nextPage = page + 1;
+              fetch(
+                `http://localhost:3000/api/commits?user=${user}&repo=${repo}&page=${nextPage}`
+              )
+                .then((r) => r.json())
+                .then((res) => {
+                  setPage(nextPage);
+                  setCommits((c) => [...c, ...res.data]);
+                });
             }}
           >
             Load More
@@ -84,6 +87,7 @@ export default function UsernameReponame(
   );
 }
 
+const missingAPIKey = !process.env.GITHUB_API_KEY;
 type Props = {
   results: Endpoints["GET /repos/{owner}/{repo}/commits"]["response"];
   missingAPIKey: boolean;
@@ -92,25 +96,16 @@ type Props = {
 export const getServerSideProps: GetServerSideProps<Props> = async (
   context
 ) => {
-  const octokit = new Octokit({
-    auth: process.env.GITHUB_API_KEY,
-  });
-
-  const { user: owner, repo } = context.params as {
-    user: string;
-    repo: string;
-  };
+  const { user, repo } = context.params as { user: string; repo: string };
+  const page = 1;
   try {
-    const results = await octokit.request("GET /repos/{owner}/{repo}/commits", {
-      owner,
-      repo,
-      page: 2,
-    });
+    const res = await fetch(
+      `http://localhost:3000/api/commits?user=${user}&repo=${repo}&page=${page}`
+    ).then((r) => r.json());
     return {
       props: {
-        results,
-        missingAPIKey: !process.env.GITHUB_API_KEY,
-        extra: {},
+        results: res,
+        missingAPIKey,
       },
     };
   } catch (error) {
@@ -124,7 +119,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
     return {
       props: {
         results: [],
-        missingAPIKey: !process.env.GITHUB_API_KEY,
+        missingAPIKey,
       },
     };
   }

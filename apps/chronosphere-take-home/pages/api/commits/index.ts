@@ -10,7 +10,8 @@ const octokit = new Octokit({
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<
-    Endpoints["GET /repos/{owner}/{repo}/commits"]["response"]
+    | Endpoints["GET /repos/{owner}/{repo}/commits"]["response"]
+    | { error: string; status: number }
   >
 ) {
   const {
@@ -28,11 +29,12 @@ export default async function handler(
       repo,
       page: parseInt(page, 10),
     });
-    return res.status(200).json(results);
+    res.status(200).json(results);
   } catch (error) {
     if ((error as RequestError).status === 404) {
-      return res.status(404);
+      res.status(404).json({ status: 404, error: "Project not found" });
+    } else {
+      res.status(404).json({ status: 500, error: "Unknown error" });
     }
-    return res.status(500);
   }
 }

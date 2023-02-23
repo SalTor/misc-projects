@@ -102,6 +102,13 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
     const res = await fetch(
       `http://localhost:3000/api/commits?user=${user}&repo=${repo}&page=${page}`
     ).then((r) => r.json());
+    if (res.error) {
+      return {
+        redirect: {
+          destination: "/does/not/exist",
+        },
+      };
+    }
     return {
       props: {
         results: res,

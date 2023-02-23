@@ -2,11 +2,12 @@
 
 module.exports = {
   preset: "ts-jest",
-  testEnvironment: "jsdom",
+  testEnvironment: "jest-environment-jsdom",
   testRegex: "(/__tests__/.*|\\.(test|spec))\\.(js|jsx|ts|tsx)$",
   rootDir: "./",
-  moduleFileExtensions: ["js", "json", "jsx", "ts", "tsx"],
+  moduleFileExtensions: ["js", "jsx", "ts", "tsx", "json"],
   transform: {
     "\\.[jt]sx?$": "babel-jest",
   },
+  setupFilesAfterEnv: ["../../packages/jest-config/setup.js"],
 };

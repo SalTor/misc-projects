@@ -1,3 +1,12 @@
+## Getting started
+Generate a github API key: https://docs.github.com/en/rest/guides/getting-started-with-the-rest-api
+Create `.env.local` and enter that API key under a name of `GITHUB_API_KEY`
+
+```bash
+pnpm install
+pnpm run dev
+```
+
 ## Getting Started
 
 First, run the development server:

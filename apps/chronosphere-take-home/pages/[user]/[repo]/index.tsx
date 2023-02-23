@@ -100,7 +100,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async (
   const page = 1;
   try {
     const res = await fetch(
-      `http://localhost:3000/api/commits?user=${user}&repo=${repo}&page=${page}`
+      /* TODO: Doing it this way so the app works if running just this repo or the whole monorepo */
+      `http://${context.req.headers.host}/api/commits?user=${user}&repo=${repo}&page=${page}`
     ).then((r) => r.json());
     if (res.error) {
       return {

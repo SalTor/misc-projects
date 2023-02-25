@@ -1,5 +1,11 @@
 import { faker } from "@faker-js/faker";
-import { differenceInSeconds, isSameDay, parseISO, startOfDay } from "date-fns";
+import {
+  differenceInSeconds,
+  format,
+  isSameDay,
+  parseISO,
+  startOfDay,
+} from "date-fns";
 import { v4 as uuid } from "uuid";
 
 export const sal: User = {
@@ -14,9 +20,11 @@ export const yuji: User = {
 export const randomMessage = ({
   user,
   created_at,
+  message,
 }: {
   user?: User;
   created_at?: string;
+  message?: string;
 }) =>
   ({
     id: uuid(),
@@ -25,7 +33,7 @@ export const randomMessage = ({
       id: uuid(),
       name: faker.name.fullName(),
     },
-    message: faker.lorem.sentence(),
+    message: message || faker.lorem.sentence(),
     created_at: created_at || new Date().toISOString(),
   } as ChatMessage);
 
@@ -74,6 +82,45 @@ export const isMessageBundle = (bundle: Bundle): bundle is MessageBundle =>
 
 export const isEventBundle = (bundle: Bundle): bundle is EventBundle =>
   bundle.type === "event";
+
+export const serializeHistory = (chatLog: ChatHistory) => {
+  const result: {
+    dates: Record<
+      string,
+      {
+        id: string;
+        bundles: Record<
+          string,
+          {
+            type: string;
+            length: number;
+            content: Record<string, Activity>;
+          }
+        >;
+      }
+    >;
+  } = { dates: {} };
+  for (const day of chatLog.days) {
+    const fdate = format(parseISO(day.date), "MM-dd-yyyy");
+    result.dates[fdate] = {
+      id: day.id,
+      bundles: {},
+    };
+    for (let i = 0; i < day.content.length; i++) {
+      const bundle = day.content[i];
+      result.dates[fdate].bundles[`${i + 1}`] = {
+        type: bundle.type,
+        length: bundle.content.length,
+        content: {},
+      };
+      for (let j = 0; j < bundle.content.length; j++) {
+        result.dates[fdate].bundles[`${i + 1}`].content[`${j + 1}`] =
+          bundle.content[j];
+      }
+    }
+  }
+  return result;
+};
 
 export const organizeActivity = (activities: readonly Activity[]) => {
   const result: ChatHistory = {

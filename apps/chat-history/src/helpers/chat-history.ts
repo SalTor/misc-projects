@@ -10,11 +10,11 @@ import { v4 as uuid } from "uuid";
 
 export const sal: User = {
   id: uuid(),
-  name: "salt",
+  name: "Sal Torcivia",
 };
 export const yuji: User = {
   id: uuid(),
-  name: "yuji",
+  name: "Yuji Itadori",
 };
 
 export const randomMessage = ({

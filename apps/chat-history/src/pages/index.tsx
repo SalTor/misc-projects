@@ -1,28 +1,22 @@
 import { useState } from "react";
 
-import { addMinutes, format, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 
-import {
-  isEventBundle,
-  isMessageBundle,
-  organizeActivity,
-  randomEvent,
-  randomMessage,
-  sal,
-  yuji,
-} from "../helpers/chat-history";
+import { isEventBundle, isMessageBundle } from "../helpers/chat-history";
+
+import serverChatHistory from "./chat-history";
 
 export default function Web(props: { chatLog: ChatHistory }) {
   const [chatLog] = useState<ChatHistory>(props.chatLog);
 
   return (
-    <div className="pt-5">
+    <div className="pt-5 overflow-y-scroll h-[200px]">
       {chatLog.days.map((day) => (
         <section
           key={day.id}
-          className="max-w-[600px] mx-auto bg-[#efefef] p-5"
+          className="max-w-[600px] mx-auto bg-[#efefef] p-5 relative"
         >
-          <h2 className="text-center font-bold text-xl">
+          <h2 className="sticky w-[130px] text-center top-0 left-1/2 -translate-x-1/2 bg-white px-3 py-1 rounded-full border border-black">
             {format(parseISO(day.date), "MMMM d")}
           </h2>
           {day.content.map((bundle) => (
@@ -59,17 +53,7 @@ export default function Web(props: { chatLog: ChatHistory }) {
 export function getStaticProps() {
   return {
     props: {
-      chatLog: organizeActivity([
-        randomMessage({ user: sal }),
-        randomMessage({ user: yuji }),
-        randomEvent(),
-        randomMessage({ user: yuji }),
-        randomMessage({ user: yuji }),
-        randomMessage({
-          user: yuji,
-          created_at: addMinutes(new Date(), 2).toISOString(),
-        }),
-      ]),
+      chatLog: serverChatHistory,
     },
   };
 }

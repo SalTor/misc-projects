@@ -3,11 +3,6 @@
     "paths": {}
   },
   "extends": "tsconfig/nextjs.json",
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    "../../../../.config/emacs/.saves/!Users!salvatoretorcivia!projects!misc-projects!apps!chat-history!src!types!chat-history.d.ts~"
-  ],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"]
 }

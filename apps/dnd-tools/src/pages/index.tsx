@@ -30,7 +30,7 @@ export default function Web({
       </Head>
       <LoginBtn />
       {isConnected ? (
-        <h2>You are conncted to MongoDB</h2>
+        <h2>You are connected to MongoDB</h2>
       ) : (
         <h2>
           You ase NOT connected to MongoDB. Check the <code>README.md</code> for

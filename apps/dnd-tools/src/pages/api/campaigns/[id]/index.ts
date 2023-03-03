@@ -17,7 +17,7 @@ export default async function handler(
     await prisma.player.deleteMany(whereCampaign);
     await prisma.battle.deleteMany(whereCampaign);
     await prisma.campaign.delete({ where: { id: campaignId } });
-    res.status(200).json();
+    res.status(200).json({});
   } catch (error) {
     res.status(500).send(error);
   }

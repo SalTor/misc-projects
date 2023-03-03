@@ -1,6 +1,18 @@
 import { AppProps } from "next/app";
+import Link from "next/link";
 import { SessionProvider } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "react-query";
+
+import {
+  AppShell,
+  Header,
+  MantineProvider,
+  Navbar,
+  NavLink,
+} from "@mantine/core";
+import { IconHome2 } from "@tabler/icons-react";
+
+import LoginBtn from "../components/login-btn";
 
 import "../styles/globals.css";
 
@@ -11,7 +23,35 @@ export default function MyApp({
   return (
     <SessionProvider session={session}>
       <QueryClientProvider client={new QueryClient()}>
-        <Component {...pageProps} />
+        <MantineProvider
+          withGlobalStyles
+          withNormalizeCSS
+          theme={{
+            /** Put your mantine theme override here */
+            colorScheme: "dark",
+          }}
+        >
+          <AppShell
+            padding="md"
+            navbar={
+              <Navbar width={{ base: 300 }} height={500} p="xs">
+                <Link href="/">
+                  <NavLink
+                    label="Home"
+                    icon={<IconHome2 size="1rem" stroke={1.5} />}
+                  />
+                </Link>
+              </Navbar>
+            }
+            header={
+              <Header height={60} p="xs">
+                <LoginBtn />
+              </Header>
+            }
+          >
+            <Component {...pageProps} />
+          </AppShell>
+        </MantineProvider>
       </QueryClientProvider>
     </SessionProvider>
   );

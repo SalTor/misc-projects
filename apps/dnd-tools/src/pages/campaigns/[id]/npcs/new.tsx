@@ -1,8 +1,9 @@
 import { GetServerSidePropsContext, InferGetServerSidePropsType } from "next";
-import {useRouter} from 'next/router'
+import { useRouter } from "next/router";
 import { useState } from "react";
 import { useMutation } from "react-query";
 
+import { Button, Input, Space, TextInput } from "@mantine/core";
 import { ObjectId } from "mongodb";
 
 import clientPromise from "../../../../lib/mongodb";
@@ -10,30 +11,46 @@ import clientPromise from "../../../../lib/mongodb";
 export default function CampaignNPCsNew(
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) {
-  const router = useRouter()
-  const [name, setName] = useState('')
-  const {mutate:createNPC} = useMutation(async (name: string) => fetch('/api/campaigns/'+router.query.id+'/npcs/new', {
-      method: 'POST',
-      body: JSON.stringify({name}),
-  }).then(res => res.json()), {
-    onSettled(_, error) {
-      if (error) return
-      router.push('/campaigns/'+router.query.id)
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const { mutate: createNPC } = useMutation(
+    async (name: string) =>
+      fetch("/api/campaigns/" + router.query.id + "/npcs/new", {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      }).then((res) => res.json()),
+    {
+      onSettled(_, error) {
+        if (error) return;
+        router.push("/campaigns/" + router.query.id);
+      },
     }
-  })
+  );
   return (
     <div>
       <h1>Campaign: {props.campaign.title}</h1>
       <h2>Create new NPC!</h2>
-      <input name="name" type="text" value={name} onChange={e => setName(e.target.value)}/>
-      <button onClick={() => createNPC(name)}>Create NPC</button>
+
+      <Input.Wrapper label="NPC Name">
+        <TextInput
+          name="name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Barney the dinosaur"
+        />
+      </Input.Wrapper>
+
+      <Space h="md" />
+
+      <Button onClick={() => createNPC(name)}>Create NPC</Button>
     </div>
-  )
+  );
 }
 
 export async function getServerSideProps(context: GetServerSidePropsContext) {
   try {
-    const campaign_id = new ObjectId(context.query.id as string)
+    const campaign_id = new ObjectId(context.query.id as string);
 
     const client = await clientPromise;
 
@@ -47,14 +64,14 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
 
     return {
       props: {
-        campaign: JSON.parse(JSON.stringify(campaign))
-      }
-    }
+        campaign: JSON.parse(JSON.stringify(campaign)),
+      },
+    };
   } catch (error) {
     return {
       props: {
-        campaign: null
-      }
-    }
+        campaign: null,
+      },
+    };
   }
 }

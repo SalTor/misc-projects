@@ -3,6 +3,6 @@
     "jsx": "preserve"
   },
   "extends": "tsconfig/nextjs.json",
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "src/pages/_document.tsx~", "src/middleware.ts~"],
   "exclude": ["node_modules"]
 }

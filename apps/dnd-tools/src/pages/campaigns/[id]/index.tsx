@@ -1,6 +1,7 @@
 import { GetServerSidePropsContext, InferGetServerSidePropsType } from "next";
 import Link from "next/link";
 import {useRouter} from 'next/router'
+import {Button} from '@mantine/core'
 
 import { ObjectId } from "mongodb";
 
@@ -18,7 +19,9 @@ export default function CampaignPage(
 
       <article>
         <p>NPCs:</p>
-      <Link href={'/campaigns/'+router.query.id+'/npcs/new'}>Create character</Link>
+      <Link href={'/campaigns/'+router.query.id+'/npcs/new'}>
+          <Button>Create character</Button>
+    </Link>
 
         <ul className="list-disc">
 

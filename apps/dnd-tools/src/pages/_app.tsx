@@ -10,7 +10,7 @@ import {
   Navbar,
   NavLink,
 } from "@mantine/core";
-import { IconHome2 } from "@tabler/icons-react";
+import { IconHammer, IconHome2 } from "@tabler/icons-react";
 
 import LoginBtn from "../components/login-btn";
 
@@ -28,7 +28,7 @@ export default function MyApp({
           withNormalizeCSS
           theme={{
             /** Put your mantine theme override here */
-            colorScheme: "dark",
+            colorScheme: "light",
           }}
         >
           <AppShell
@@ -39,6 +39,12 @@ export default function MyApp({
                   <NavLink
                     label="Home"
                     icon={<IconHome2 size="1rem" stroke={1.5} />}
+                  />
+                </Link>
+                <Link href="/campaigns">
+                  <NavLink
+                    label="Campaigns"
+                    icon={<IconHammer size="1rem" stroke={1.5} />}
                   />
                 </Link>
               </Navbar>

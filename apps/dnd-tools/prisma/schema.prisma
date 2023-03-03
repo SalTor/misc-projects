@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Battle {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId  String    @db.ObjectId
+  campaign    Campaign  @relation(fields: [campaignId], references: [id])
+  title       String    @default("Please name me")
+}
+
+model Campaign {
+  id      String  @id @default(auto()) @map("_id") @db.ObjectId
+  title   String
+  battles Battle[]
+  npcs    Npc[]
+  players Player[]
+}
+
+model Npc {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId  String    @db.ObjectId
+  campaign    Campaign  @relation(fields: [campaignId], references: [id])
+  name        String    @default("Please name me")
+  forStory    Boolean   @default(false)
+  known       Boolean   @default(false)
+}
+
+model Player {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId     String   @db.ObjectId
+  campaign       Campaign @relation(fields: [campaignId], references: [id])
+  name           String   @default("Please name me")
+  maxHp          Int      @default(5)
+  passiveWisdom  Int      @default(10)
+}

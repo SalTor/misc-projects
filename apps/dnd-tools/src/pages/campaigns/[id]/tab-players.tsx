@@ -163,7 +163,11 @@ export default function TabsPlayers(props: {
               rightIcon={
                 isUpdatingPlayer ? <IconLoader /> : <IconDeviceFloppy />
               }
-              disabled={!editPlayerForm.isValid() || isUpdatingPlayer}
+              disabled={
+                !editPlayerForm.isValid() ||
+                isUpdatingPlayer ||
+                isDeletingPlayer
+              }
             >
               Save
             </Button>
@@ -172,7 +176,7 @@ export default function TabsPlayers(props: {
               onClick={() => deletePlayer(editPlayerForm.values)}
               color="red"
               rightIcon={isDeletingPlayer ? <IconLoader /> : <IconTrash />}
-              disabled={isDeletingPlayer}
+              disabled={isDeletingPlayer || isUpdatingPlayer}
             >
               Delete
             </Button>

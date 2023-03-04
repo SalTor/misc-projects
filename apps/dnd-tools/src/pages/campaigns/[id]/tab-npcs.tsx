@@ -132,7 +132,9 @@ export default function TabsNPCS(props: { npcs: Npc[]; campaign: Campaign }) {
             <Button
               type="submit"
               rightIcon={isUpdatingNpc ? <IconLoader /> : <IconDeviceFloppy />}
-              disabled={!editNpcForm.isValid() || isUpdatingNpc}
+              disabled={
+                !editNpcForm.isValid() || isUpdatingNpc || isDeletingNpc
+              }
             >
               Save
             </Button>
@@ -141,7 +143,7 @@ export default function TabsNPCS(props: { npcs: Npc[]; campaign: Campaign }) {
               onClick={() => deleteNpc(editNpcForm.values)}
               color="red"
               rightIcon={isDeletingNpc ? <IconLoader /> : <IconTrash />}
-              disabled={isDeletingNpc}
+              disabled={isDeletingNpc || isUpdatingNpc}
             >
               Delete
             </Button>

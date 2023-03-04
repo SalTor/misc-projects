@@ -28,6 +28,7 @@ import {
 } from "@tabler/icons-react";
 
 import NPCsTab from "./tab-npcs";
+import PlayersTab from "./tab-players";
 
 import { trpc } from "~/utils/trpc";
 
@@ -110,7 +111,7 @@ export default function CampaignPage(
             <NPCsTab npcs={props.npcs} campaign={campaign} />
           </Tabs.Panel>
           <Tabs.Panel value="players" pt="xs">
-            TODO: LIST OF PLAYERS
+            <PlayersTab players={props.players} campaign={campaign} />
           </Tabs.Panel>
           <Tabs.Panel value="battles" pt="xs">
             TODO: LIST OF BATTLES
@@ -219,7 +220,6 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   try {
     const campaignId = context.query.id as string;
 
-    // TODO: replace with trpc
     const prisma = new PrismaClient();
     await prisma.$connect();
 
@@ -229,6 +229,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
       },
     });
     const npcs = await prisma.npc.findMany({ where: { campaignId } });
+    const players = await prisma.player.findMany({ where: { campaignId } });
 
     if (!campaign) {
       return {
@@ -242,6 +243,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
       props: {
         campaign,
         npcs,
+        players,
       },
     };
   } catch (error) {

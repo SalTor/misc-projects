@@ -5,12 +5,14 @@ import { publicProcedure, router } from "../trpc";
 
 import { campaignRouter } from "./campaign";
 import { npcRouter } from "./npc";
+import { playerRouter } from "./player";
 
 export const appRouter = router({
   healthcheck: publicProcedure.query(() => "yay!"),
 
   campaign: campaignRouter,
   npc: npcRouter,
+  player: playerRouter,
 });
 
 export type AppRouter = typeof appRouter;

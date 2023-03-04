@@ -16,10 +16,7 @@ import LoginBtn from "../components/login-btn";
 
 import "../styles/globals.css";
 
-export default function MyApp({
-  Component,
-  pageProps: { session, ...pageProps },
-}: AppProps) {
+function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   return (
     <SessionProvider session={session}>
       <QueryClientProvider client={new QueryClient()}>
@@ -62,3 +59,5 @@ export default function MyApp({
     </SessionProvider>
   );
 }
+
+export default MyApp;

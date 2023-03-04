@@ -1,10 +1,9 @@
 import { InferGetServerSidePropsType } from "next";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useMutation } from "react-query";
+import { useState } from "react";
 
 import {
-  Anchor,
   Button,
   Container,
   Drawer,
@@ -15,18 +14,18 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
-import { Campaign, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { IconLoader } from "@tabler/icons-react";
+
+import { trpc } from "~/utils/trpc";
 
 export default function CampaignPage(
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) {
   const router = useRouter();
-  const { campaigns } = props;
+  const [campaigns, setCampaigns] = useState(props.campaigns);
 
-  const [isCreateOpen, { open: openCreate, close: closeCreate }] =
-    useDisclosure(false);
-  const createForm = useForm({
+  const createCampaignForm = useForm({
     initialValues: {
       title: "",
     },
@@ -34,20 +33,22 @@ export default function CampaignPage(
       title: (val) => (!!val ? null : "Title required"),
     },
   });
-
+  const [showCreateCampaign, { open: openCreate, close: closeCreate }] =
+    useDisclosure(false);
   const {
     mutate: createCampaign,
     isLoading: isCreating,
     isSuccess: didCreate,
-  } = useMutation({
-    mutationFn: async (values: Omit<Campaign, "id">) =>
-      fetch("/api/campaigns/new", {
-        method: "POST",
-        body: JSON.stringify(values),
-      }).then((res) => res.json()),
+  } = trpc.campaign.add.useMutation({
     onSettled(data, error) {
       if (error) return;
-      router.push("/campaigns/" + data.id);
+      if (data) {
+        setCampaigns((c) => {
+          c.push(data);
+          return c;
+        });
+        router.push("/campaigns/" + data.id);
+      }
     },
   });
 
@@ -78,16 +79,23 @@ export default function CampaignPage(
         </Table>
       </Container>
 
-      <Drawer opened={isCreateOpen} onClose={closeCreate}>
+      <Drawer opened={showCreateCampaign} onClose={closeCreate}>
         <form
-          onSubmit={createForm.onSubmit((values) => createCampaign(values))}
+          onSubmit={createCampaignForm.onSubmit((values) =>
+            createCampaign(values)
+          )}
         >
           <Stack>
-            <TextInput label="Title" {...createForm.getInputProps("title")} />
+            <TextInput
+              label="Title"
+              {...createCampaignForm.getInputProps("title")}
+            />
             <Space h="md" />
             <Button
               type="submit"
-              disabled={!createForm.isValid() || isCreating || didCreate}
+              disabled={
+                !createCampaignForm.isValid() || isCreating || didCreate
+              }
               rightIcon={isCreating ? <IconLoader /> : null}
             >
               Save
@@ -112,7 +120,6 @@ export async function getServerSideProps() {
       },
     };
   } catch (error) {
-    console.log("error", error);
     return {
       props: {
         campaigns: [],

@@ -15,6 +15,7 @@ import { IconHammer, IconHome2 } from "@tabler/icons-react";
 import LoginBtn from "../components/login-btn";
 
 import "../styles/globals.css";
+import { trpc } from "~/utils/trpc";
 
 function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   return (
@@ -60,4 +61,4 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   );
 }
 
-export default MyApp;
+export default trpc.withTRPC(MyApp);

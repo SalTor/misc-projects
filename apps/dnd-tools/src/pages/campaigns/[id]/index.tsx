@@ -1,7 +1,6 @@
 import { GetServerSidePropsContext, InferGetServerSidePropsType } from "next";
 import { useRouter } from "next/router";
 import { useState } from "react";
-import { useMutation } from "react-query";
 
 import {
   Anchor,
@@ -21,121 +20,133 @@ import {
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
 import { Npc, PrismaClient } from "@prisma/client";
-import { IconDeviceFloppy, IconLoader, IconTrash } from "@tabler/icons-react";
+import {
+  IconDeviceFloppy,
+  IconLoader,
+  IconPencil,
+  IconTrash,
+} from "@tabler/icons-react";
 
-type NpcCreation = Partial<Omit<Npc, "id|campaignId">>;
+import { trpc } from "~/utils/trpc";
 
 export default function CampaignPage(
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) {
-  const { campaign, npcs } = props;
+  const [campaign, setCampaign] = useState(props.campaign);
+  const [npcs, setNpcs] = useState(props.npcs);
 
   const router = useRouter();
 
-  const [editingNpc, setEditingNpc] = useState<Npc>();
-  const createNpcForm = useForm({
-    initialValues: { name: "", known: false },
-    validate: {
-      name: (val) => (!!val ? null : "Name required"),
-    },
+  const editCampaignForm = useForm({
+    initialValues: { id: campaign.id, title: campaign.title },
+    validate: { title: (val) => (!val ? "Title nedded" : null) },
   });
-  const deleteForm = useForm({
-    initialValues: { campaignId: "", title: "" },
+  const [
+    showEditCampaign,
+    { open: openEditCampaign, close: closeEditCampaign },
+  ] = useDisclosure(false);
+  const { mutate: updateCampaign, isLoading: isUpdatingCampaign } =
+    trpc.campaign.update.useMutation({
+      onSettled(data, error) {
+        if (error) return;
+        if (data) {
+          setCampaign(data);
+          closeEditCampaign();
+        }
+      },
+    });
+  const deleteCampaignForm = useForm({
+    initialValues: { id: "", title: "" },
     validate: {
-      campaignId: (val) =>
-        val === campaign.id ? null : "Campaign ID does not match",
+      id: (val) => (val === campaign.id ? null : "Campaign ID does not match"),
       title: (val) =>
         val === campaign.title ? null : "Campaign title does not match",
     },
   });
-
-  const [isEditingNpc, { open: editNpc, close: discardNpcChanges }] =
-    useDisclosure(false);
   const [
-    shouldCreateNpc,
-    { open: startCreatinNpc, close: discardNpcCreation },
+    showDeleteCampaign,
+    { open: openDeleteCampaign, close: closeDeleteCampaign },
   ] = useDisclosure(false);
-  const [showDelete, { open: openDelete, close: closeDelete }] =
-    useDisclosure(false);
-
-  const {
-    mutate: updateNpc,
-    isLoading,
-    isSuccess,
-  } = useMutation({
-    mutationFn: async (npcToUpdate: Npc) =>
-      fetch("/api/campaigns/" + campaign.id + "/npcs/" + npcToUpdate.id, {
-        method: "PUT",
-        body: JSON.stringify(npcToUpdate),
-      }),
-    onSettled(_, error) {
-      if (error) return; // TODO: handle error states
-      router.reload();
-    },
-  });
-
-  const {
-    mutate: createNpc,
-    isLoading: isCreatingNpc,
-    isSuccess: didCreateNpc,
-  } = useMutation({
-    mutationFn: async (data: NpcCreation) =>
-      fetch("/api/campaigns/" + campaign.id + "/npcs/new", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
-    onSettled(_, error) {
-      if (error) return; // TODO: handle error states
-      router.reload();
-    },
-  });
-
-  const {
-    mutate: deleteNpc,
-    isLoading: isDeletingNpc,
-    isSuccess: didDeleteNpc,
-  } = useMutation({
-    mutationFn: async (npc: Npc) =>
-      fetch("/api/campaigns/" + campaign.id + "/npcs/" + npc.id, {
-        method: "DELETE",
-      }),
-    onSettled(_, error) {
-      if (error) return;
-      router.reload();
-    },
-  });
-
-  const saveEditingNpcChanges = () => {
-    if (!editingNpc) return;
-    updateNpc(editingNpc);
-  };
-
   const {
     mutate: deleteCampaign,
     isLoading: isDeletingCampaign,
     isSuccess: didDeleteCampaign,
-  } = useMutation({
-    mutationFn: async () =>
-      fetch("/api/campaigns/" + campaign.id, {
-        method: "DELETE",
-      }).then((res) => res.json()),
+  } = trpc.campaign.delete.useMutation({
     onSettled(_, error) {
-      if (error) return; // TODO
+      if (error) return;
       router.push("/campaigns");
     },
   });
+
+  const createNpcForm = useForm({
+    initialValues: { campaignId: campaign.id, name: "", known: false },
+    validate: {
+      name: (val) => (!!val ? null : "Name required"),
+    },
+  });
+  const [showCreateNpc, { open: startNpcCreation, close: discardNpcCreation }] =
+    useDisclosure(false);
+  const { mutate: createNpc, isLoading: isCreatingNpc } =
+    trpc.npc.add.useMutation({
+      onSettled(data, error) {
+        if (error) return;
+        if (data) {
+          setNpcs((c) => {
+            c.push(data);
+            return c;
+          });
+          discardNpcCreation();
+          createNpcForm.reset();
+        }
+      },
+    });
+
+  const editNpcForm = useForm<Npc>({
+    initialValues: {
+      id: "",
+      name: "",
+      campaignId: "",
+      forStory: false,
+      known: false,
+    },
+    validate: {
+      name: (val) => (!!val ? null : "Name required"),
+    },
+  });
+  const [showEditNpc, { open: editNpc, close: discardNpcChanges }] =
+    useDisclosure(false);
+  const { mutate: updateNpc, isLoading: isUpdatingNpc } =
+    trpc.npc.update.useMutation({
+      onSettled(data, error) {
+        if (error) return;
+        if (data) {
+          setNpcs((c) => c.map((_) => (_.id === data.id ? data : _)));
+          discardNpcChanges();
+        }
+      },
+    });
+  const { mutate: deleteNpc, isLoading: isDeletingNpc } =
+    trpc.npc.delete.useMutation({
+      onSettled(data, error) {
+        if (error) return;
+        if (data) {
+          setNpcs((c) => c.filter((_) => _.id !== data.id));
+          discardNpcChanges();
+        }
+      },
+    });
 
   return (
     <div>
       <Container ml="xs" mt="md">
         <Breadcrumbs>
           <Text>Campaigns</Text>
-          <Text>{campaign.title}</Text>
+          <Anchor onClick={openEditCampaign}>
+            <Text td="underline">
+              {campaign.title} <IconPencil size="1rem" stroke={1.5} />
+            </Text>
+          </Anchor>
         </Breadcrumbs>
-
-        <Space h="md" />
-
-        <Button onClick={startCreatinNpc}>Create NPC</Button>
 
         <Space h="md" />
 
@@ -156,7 +167,7 @@ export default function CampaignPage(
                   <Anchor
                     onClick={() => {
                       editNpc();
-                      setEditingNpc(npc);
+                      editNpcForm.setValues(npc);
                     }}
                   >
                     Edit
@@ -166,58 +177,50 @@ export default function CampaignPage(
             ))}
           </tbody>
         </Table>
-        <Divider my="xl" />
-        <Text color="red">Danger zone</Text>
-        <Space h="lg" />
-        <Button onClick={openDelete} color="red">
-          Delete campaign
-        </Button>
+
+        <Space h="md" />
+
+        <Button onClick={startNpcCreation}>Create NPC</Button>
       </Container>
 
-      <Drawer opened={isEditingNpc} onClose={discardNpcChanges}>
-        {editingNpc && (
+      <Drawer opened={showEditNpc} onClose={discardNpcChanges}>
+        <form onSubmit={editNpcForm.onSubmit((vals) => updateNpc(vals))}>
           <Stack>
             <TextInput
               label="Name"
-              value={editingNpc.name}
-              onChange={(e) =>
-                setEditingNpc({ ...editingNpc, name: e.target.value })
-              }
+              {...editNpcForm.getInputProps("name")}
               required
               withAsterisk
             />
 
             <Checkbox
               label="Known by players"
-              checked={editingNpc.known}
-              onChange={() =>
-                setEditingNpc({ ...editingNpc, known: !editingNpc.known })
-              }
+              {...editNpcForm.getInputProps("known", { type: "checkbox" })}
             />
 
             <Checkbox label="For the story (aka not a monster)" disabled />
 
             <Button
-              onClick={saveEditingNpcChanges}
-              rightIcon={isLoading ? <IconLoader /> : <IconDeviceFloppy />}
-              disabled={isLoading || isSuccess}
+              type="submit"
+              rightIcon={isUpdatingNpc ? <IconLoader /> : <IconDeviceFloppy />}
+              disabled={!editNpcForm.isValid() || isUpdatingNpc}
             >
               Save
             </Button>
 
             <Button
-              onClick={() => deleteNpc(editingNpc)}
+              onClick={() => deleteNpc(editNpcForm.values)}
               color="red"
               rightIcon={isDeletingNpc ? <IconLoader /> : <IconTrash />}
-              disabled={isDeletingNpc || didDeleteNpc}
+              disabled={isDeletingNpc}
             >
               Delete
             </Button>
           </Stack>
-        )}
+        </form>
       </Drawer>
 
-      <Drawer opened={shouldCreateNpc} onClose={discardNpcCreation}>
+      <Drawer opened={showCreateNpc} onClose={discardNpcCreation}>
         <form onSubmit={createNpcForm.onSubmit((vals) => createNpc(vals))}>
           <Stack>
             <TextInput
@@ -237,7 +240,7 @@ export default function CampaignPage(
             />
             <Button
               rightIcon={isCreatingNpc ? <IconLoader /> : <IconDeviceFloppy />}
-              disabled={isCreatingNpc || didCreateNpc}
+              disabled={!createNpcForm.isValid() || isCreatingNpc}
               type="submit"
             >
               Save
@@ -246,54 +249,99 @@ export default function CampaignPage(
         </form>
       </Drawer>
 
-      <Modal
-        opened={showDelete}
-        onClose={() => {
-          closeDelete();
-          deleteForm.reset();
-        }}
-        title="Delete campaign"
-      >
-        <form onSubmit={deleteForm.onSubmit(() => deleteCampaign())}>
-          <Text>Confirm campaign details to delete</Text>
+      <Drawer opened={showEditCampaign} onClose={closeEditCampaign}>
+        <form
+          onSubmit={editCampaignForm.onSubmit((vals) => updateCampaign(vals))}
+        >
+          <Stack>
+            <TextInput
+              label="Name"
+              {...editCampaignForm.getInputProps("title")}
+              required
+              withAsterisk
+              disabled={isUpdatingCampaign || showDeleteCampaign}
+            />
 
-          <Space h="md" />
+            <Button
+              type="submit"
+              rightIcon={
+                isUpdatingCampaign ? <IconLoader /> : <IconDeviceFloppy />
+              }
+              disabled={
+                !editCampaignForm.isValid() ||
+                isUpdatingCampaign ||
+                showDeleteCampaign
+              }
+            >
+              Save
+            </Button>
 
-          <TextInput
-            label="Campaign ID"
-            {...deleteForm.getInputProps("campaignId")}
-          />
-
-          <TextInput
-            label="Campaign title"
-            {...deleteForm.getInputProps("title")}
-          />
-
-          <Space h="md" />
-
-          <Button
-            color="red"
-            type="submit"
-            disabled={
-              !deleteForm.isValid() || isDeletingCampaign || didDeleteCampaign
-            }
-            rightIcon={isDeletingCampaign ? <IconLoader /> : null}
-          >
-            Confirm
-          </Button>
-
-          <Space h="md" />
-
-          <Button
-            onClick={() => {
-              closeDelete();
-              deleteForm.reset();
-            }}
-          >
-            Cancel
-          </Button>
+            <Button
+              onClick={openDeleteCampaign}
+              color="red"
+              disabled={isUpdatingCampaign || showDeleteCampaign}
+            >
+              Delete
+            </Button>
+          </Stack>
         </form>
-      </Modal>
+
+        <Modal
+          opened={showDeleteCampaign}
+          onClose={() => {
+            closeDeleteCampaign();
+            deleteCampaignForm.reset();
+          }}
+          title="Delete campaign"
+        >
+          <form
+            onSubmit={deleteCampaignForm.onSubmit(() =>
+              deleteCampaign({ id: campaign.id })
+            )}
+          >
+            <Text>Confirm campaign details to delete</Text>
+
+            <Space h="md" />
+
+            <TextInput
+              label="Campaign ID"
+              {...deleteCampaignForm.getInputProps("id")}
+            />
+
+            <TextInput
+              label="Campaign title"
+              {...deleteCampaignForm.getInputProps("title")}
+            />
+
+            <Space h="md" />
+
+            <Button
+              color="red"
+              type="submit"
+              disabled={
+                !deleteCampaignForm.isValid() ||
+                isDeletingCampaign ||
+                didDeleteCampaign
+              }
+              rightIcon={isDeletingCampaign ? <IconLoader /> : null}
+            >
+              Confirm
+            </Button>
+
+            <Space h="md" />
+
+            <Button
+              onClick={() => {
+                closeDeleteCampaign();
+                deleteCampaignForm.reset();
+              }}
+              disabled={isDeletingCampaign || didDeleteCampaign}
+            >
+              Cancel
+            </Button>
+          </form>
+        </Modal>
+      </Drawer>
     </div>
   );
 }

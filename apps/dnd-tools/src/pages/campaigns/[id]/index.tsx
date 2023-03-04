@@ -6,26 +6,28 @@ import {
   Anchor,
   Breadcrumbs,
   Button,
-  Checkbox,
   Container,
-  Divider,
   Drawer,
   Modal,
   Space,
   Stack,
-  Table,
+  Tabs,
   Text,
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
-import { Npc, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import {
   IconDeviceFloppy,
   IconLoader,
+  IconMan,
   IconPencil,
-  IconTrash,
+  IconRobot,
+  IconSword,
 } from "@tabler/icons-react";
+
+import NPCsTab from "./tab-npcs";
 
 import { trpc } from "~/utils/trpc";
 
@@ -33,7 +35,6 @@ export default function CampaignPage(
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) {
   const [campaign, setCampaign] = useState(props.campaign);
-  const [npcs, setNpcs] = useState(props.npcs);
 
   const router = useRouter();
 
@@ -78,64 +79,6 @@ export default function CampaignPage(
     },
   });
 
-  const createNpcForm = useForm({
-    initialValues: { campaignId: campaign.id, name: "", known: false },
-    validate: {
-      name: (val) => (!!val ? null : "Name required"),
-    },
-  });
-  const [showCreateNpc, { open: startNpcCreation, close: discardNpcCreation }] =
-    useDisclosure(false);
-  const { mutate: createNpc, isLoading: isCreatingNpc } =
-    trpc.npc.add.useMutation({
-      onSettled(data, error) {
-        if (error) return;
-        if (data) {
-          setNpcs((c) => {
-            c.push(data);
-            return c;
-          });
-          discardNpcCreation();
-          createNpcForm.reset();
-        }
-      },
-    });
-
-  const editNpcForm = useForm<Npc>({
-    initialValues: {
-      id: "",
-      name: "",
-      campaignId: "",
-      forStory: false,
-      known: false,
-    },
-    validate: {
-      name: (val) => (!!val ? null : "Name required"),
-    },
-  });
-  const [showEditNpc, { open: editNpc, close: discardNpcChanges }] =
-    useDisclosure(false);
-  const { mutate: updateNpc, isLoading: isUpdatingNpc } =
-    trpc.npc.update.useMutation({
-      onSettled(data, error) {
-        if (error) return;
-        if (data) {
-          setNpcs((c) => c.map((_) => (_.id === data.id ? data : _)));
-          discardNpcChanges();
-        }
-      },
-    });
-  const { mutate: deleteNpc, isLoading: isDeletingNpc } =
-    trpc.npc.delete.useMutation({
-      onSettled(data, error) {
-        if (error) return;
-        if (data) {
-          setNpcs((c) => c.filter((_) => _.id !== data.id));
-          discardNpcChanges();
-        }
-      },
-    });
-
   return (
     <div>
       <Container ml="xs" mt="md">
@@ -150,104 +93,30 @@ export default function CampaignPage(
 
         <Space h="md" />
 
-        <Table withColumnBorders highlightOnHover>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Players know them</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {npcs.map((npc) => (
-              <tr key={npc.id}>
-                <td>{npc.name}</td>
-                <td>{npc.known ? "Yes" : "No"}</td>
-                <td>
-                  <Anchor
-                    onClick={() => {
-                      editNpc();
-                      editNpcForm.setValues(npc);
-                    }}
-                  >
-                    Edit
-                  </Anchor>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+        <Tabs defaultValue="npcs">
+          <Tabs.List>
+            <Tabs.Tab value="npcs" icon={<IconRobot />}>
+              NPCs
+            </Tabs.Tab>
+            <Tabs.Tab value="players" icon={<IconMan />}>
+              Players
+            </Tabs.Tab>
+            <Tabs.Tab value="battles" icon={<IconSword />}>
+              Battles
+            </Tabs.Tab>
+          </Tabs.List>
 
-        <Space h="md" />
-
-        <Button onClick={startNpcCreation}>Create NPC</Button>
+          <Tabs.Panel value="npcs" pt="xs">
+            <NPCsTab npcs={props.npcs} campaign={campaign} />
+          </Tabs.Panel>
+          <Tabs.Panel value="players" pt="xs">
+            TODO: LIST OF PLAYERS
+          </Tabs.Panel>
+          <Tabs.Panel value="battles" pt="xs">
+            TODO: LIST OF BATTLES
+          </Tabs.Panel>
+        </Tabs>
       </Container>
-
-      <Drawer opened={showEditNpc} onClose={discardNpcChanges}>
-        <form onSubmit={editNpcForm.onSubmit((vals) => updateNpc(vals))}>
-          <Stack>
-            <TextInput
-              label="Name"
-              {...editNpcForm.getInputProps("name")}
-              required
-              withAsterisk
-            />
-
-            <Checkbox
-              label="Known by players"
-              {...editNpcForm.getInputProps("known", { type: "checkbox" })}
-            />
-
-            <Checkbox label="For the story (aka not a monster)" disabled />
-
-            <Button
-              type="submit"
-              rightIcon={isUpdatingNpc ? <IconLoader /> : <IconDeviceFloppy />}
-              disabled={!editNpcForm.isValid() || isUpdatingNpc}
-            >
-              Save
-            </Button>
-
-            <Button
-              onClick={() => deleteNpc(editNpcForm.values)}
-              color="red"
-              rightIcon={isDeletingNpc ? <IconLoader /> : <IconTrash />}
-              disabled={isDeletingNpc}
-            >
-              Delete
-            </Button>
-          </Stack>
-        </form>
-      </Drawer>
-
-      <Drawer opened={showCreateNpc} onClose={discardNpcCreation}>
-        <form onSubmit={createNpcForm.onSubmit((vals) => createNpc(vals))}>
-          <Stack>
-            <TextInput
-              label="Name"
-              required
-              withAsterisk
-              {...createNpcForm.getInputProps("name")}
-            />
-            <Checkbox
-              label="Known by players"
-              {...createNpcForm.getInputProps("known", { type: "checkbox" })}
-            />
-            <Checkbox
-              label="For the story (aka not a monster)"
-              checked
-              disabled
-            />
-            <Button
-              rightIcon={isCreatingNpc ? <IconLoader /> : <IconDeviceFloppy />}
-              disabled={!createNpcForm.isValid() || isCreatingNpc}
-              type="submit"
-            >
-              Save
-            </Button>
-          </Stack>
-        </form>
-      </Drawer>
 
       <Drawer opened={showEditCampaign} onClose={closeEditCampaign}>
         <form
@@ -350,6 +219,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   try {
     const campaignId = context.query.id as string;
 
+    // TODO: replace with trpc
     const prisma = new PrismaClient();
     await prisma.$connect();
 

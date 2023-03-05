@@ -95,6 +95,7 @@ export default function CampaignPage(
 
         <Space h="md" />
 
+        {/*TODO: track active tab in url query params*/}
         <Tabs defaultValue="npcs">
           <Tabs.List>
             <Tabs.Tab value="npcs" icon={<IconRobot />}>

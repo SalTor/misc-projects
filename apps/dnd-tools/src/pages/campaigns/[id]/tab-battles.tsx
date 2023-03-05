@@ -7,6 +7,7 @@ import {
   Button,
   Drawer,
   Flex,
+  LoadingOverlay,
   NumberInput,
   Space,
   Stack,
@@ -117,7 +118,10 @@ export default function TabsPlayers(props: {
                   <Box p="md"></Box>
                   <Link
                     href={
-                      "/campaigns/" + battle.campaignId + "/battle/" + battle.id
+                      "/campaigns/" +
+                      battle.campaignId +
+                      "/battles/" +
+                      battle.id
                     }
                   >
                     View
@@ -134,39 +138,46 @@ export default function TabsPlayers(props: {
       <Button onClick={openCreateBattle}>Create Battle</Button>
 
       <Drawer opened={showEditBattle} onClose={closeEditBattle}>
-        <form onSubmit={editBattleForm.onSubmit((vals) => updateBattle(vals))}>
-          <Stack>
-            <TextInput
-              label="Title"
-              {...editBattleForm.getInputProps("title")}
-              required
-              withAsterisk
-            />
+        <Box pos="relative">
+          <LoadingOverlay visible={isUpdatingBattle} overlayBlur={5} />
+          {/*TODO: add this overlay to the other drawers*/}
 
-            <Button
-              type="submit"
-              rightIcon={
-                isUpdatingBattle ? <IconLoader /> : <IconDeviceFloppy />
-              }
-              disabled={
-                !editBattleForm.isValid() ||
-                isUpdatingBattle ||
-                isDeletingBattle
-              }
-            >
-              Save
-            </Button>
+          <form
+            onSubmit={editBattleForm.onSubmit((vals) => updateBattle(vals))}
+          >
+            <Stack>
+              <TextInput
+                label="Title"
+                {...editBattleForm.getInputProps("title")}
+                required
+                withAsterisk
+              />
 
-            <Button
-              onClick={() => deleteBattle(editBattleForm.values)}
-              color="red"
-              rightIcon={isDeletingBattle ? <IconLoader /> : <IconTrash />}
-              disabled={isDeletingBattle || isUpdatingBattle}
-            >
-              Delete
-            </Button>
-          </Stack>
-        </form>
+              <Button
+                type="submit"
+                rightIcon={
+                  isUpdatingBattle ? <IconLoader /> : <IconDeviceFloppy />
+                }
+                disabled={
+                  !editBattleForm.isValid() ||
+                  isUpdatingBattle ||
+                  isDeletingBattle
+                }
+              >
+                Save
+              </Button>
+
+              <Button
+                onClick={() => deleteBattle(editBattleForm.values)}
+                color="red"
+                rightIcon={isDeletingBattle ? <IconLoader /> : <IconTrash />}
+                disabled={isDeletingBattle || isUpdatingBattle}
+              >
+                Delete
+              </Button>
+            </Stack>
+          </form>
+        </Box>
       </Drawer>
 
       <Drawer opened={showCreateBattle} onClose={closeCreateBattle}>

@@ -27,6 +27,7 @@ import {
   IconSword,
 } from "@tabler/icons-react";
 
+import BattlesTab from "./tab-battles";
 import NPCsTab from "./tab-npcs";
 import PlayersTab from "./tab-players";
 
@@ -52,7 +53,7 @@ export default function CampaignPage(
       onSettled(data, error) {
         if (error) return;
         if (data) {
-          setCampaign(data);
+          setCampaign((c) => ({ ...c, ...data }));
           closeEditCampaign();
         }
       },
@@ -108,13 +109,13 @@ export default function CampaignPage(
           </Tabs.List>
 
           <Tabs.Panel value="npcs" pt="xs">
-            <NPCsTab npcs={props.npcs} campaign={campaign} />
+            <NPCsTab npcs={campaign.npcs} campaign={campaign} />
           </Tabs.Panel>
           <Tabs.Panel value="players" pt="xs">
-            <PlayersTab players={props.players} campaign={campaign} />
+            <PlayersTab players={campaign.players} campaign={campaign} />
           </Tabs.Panel>
           <Tabs.Panel value="battles" pt="xs">
-            TODO: LIST OF BATTLES
+            <BattlesTab battles={campaign.battles} campaign={campaign} />
           </Tabs.Panel>
         </Tabs>
       </Container>
@@ -227,9 +228,12 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
       where: {
         id: campaignId,
       },
+      include: {
+        players: true,
+        npcs: true,
+        battles: true,
+      },
     });
-    const npcs = await prisma.npc.findMany({ where: { campaignId } });
-    const players = await prisma.player.findMany({ where: { campaignId } });
 
     if (!campaign) {
       return {
@@ -242,8 +246,6 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
     return {
       props: {
         campaign,
-        npcs,
-        players,
       },
     };
   } catch (error) {

@@ -8,34 +8,51 @@ datasource db {
 }
 
 model Battle {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  campaignId  String    @db.ObjectId
-  campaign    Campaign  @relation(fields: [campaignId], references: [id])
-  title       String    @default("Please name me")
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  campaignId String   @db.ObjectId
+  title      String
+}
+
+model BattleParticipant {
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  battleId    String @db.ObjectId
+  damageTaken Int
+  entityId    String @db.ObjectId
+  entityType  String
+  initiative  Int
+  status      String
 }
 
 model Campaign {
-  id      String  @id @default(auto()) @map("_id") @db.ObjectId
+  id      String   @id @default(auto()) @map("_id") @db.ObjectId
   title   String
-  battles Battle[]
-  npcs    Npc[]
   players Player[]
+  npcs    Npc[]
+  battles Battle[]
+}
+
+model Monster {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  battleId String @db.ObjectId
+  maxHp    Int
+  name     String
 }
 
 model Npc {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  campaignId  String    @db.ObjectId
-  campaign    Campaign  @relation(fields: [campaignId], references: [id])
-  name        String    @default("Please name me")
-  forStory    Boolean   @default(false)
-  known       Boolean   @default(false)
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId String   @db.ObjectId
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  forStory   Boolean
+  known      Boolean
+  name       String
 }
 
 model Player {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  campaignId     String   @db.ObjectId
-  campaign       Campaign @relation(fields: [campaignId], references: [id])
-  name           String   @default("Please name me")
-  maxHp          Int      @default(5)
-  passiveWisdom  Int      @default(10)
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  campaign      Campaign @relation(fields: [campaignId], references: [id])
+  campaignId    String   @db.ObjectId
+  maxHp         Int
+  name          String
+  passiveWisdom Int
 }

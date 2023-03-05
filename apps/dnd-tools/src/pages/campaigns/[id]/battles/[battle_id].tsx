@@ -1,7 +1,24 @@
 import { GetServerSidePropsContext, InferGetServerSidePropsType } from "next";
 import { useRouter } from "next/router";
+import { useState } from "react";
 
-import { Anchor, Box, Breadcrumbs, Code, Table, Text } from "@mantine/core";
+import {
+  Anchor,
+  Box,
+  Breadcrumbs,
+  Button,
+  Code,
+  Drawer,
+  LoadingOverlay,
+  NumberInput,
+  Select,
+  Stack,
+  Table,
+  Text,
+  TextInput,
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
+import { useDisclosure } from "@mantine/hooks";
 import {
   BattleParticipant,
   Monster,
@@ -9,6 +26,9 @@ import {
   Player,
   PrismaClient,
 } from "@prisma/client";
+import { z } from "zod";
+
+import { trpc } from "~/utils/trpc";
 
 const statusToColor: Record<string, string> = {
   alive: "teal",
@@ -19,8 +39,50 @@ const statusToColor: Record<string, string> = {
 export default function BattlePage(
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) {
-  const { battle, battleEntities } = props;
+  const { battle } = props;
   const router = useRouter();
+
+  const [battleEntities, setBattleEntities] = useState(props.battleEntities);
+
+  const [
+    showEditParticipant,
+    { open: openEditParticipant, close: closeEditParticipant },
+  ] = useDisclosure(false);
+  const editParticipantForm = useForm({
+    initialValues: {
+      id: "1",
+      battleId: "1",
+      initiative: 0,
+      status: "alive",
+      damageTaken: 0,
+      entityId: "1",
+      entityType: "",
+      entity: {
+        name: "Sal",
+      },
+    },
+    validate: {
+      initiative: (val) =>
+        z.number().safeParse(val).success ? null : "Too low",
+      damageTaken: (val) =>
+        z.number().safeParse(val).success ? null : "Too low",
+    },
+  });
+  const { mutate: updateParticipant, isLoading: isUpdatingParticipant } =
+    trpc.battleParticipant.update.useMutation({
+      onSettled(data, error, variables) {
+        console.log("update? participant", { data, error, variables });
+        if (error) return;
+        if (data) {
+          setBattleEntities((c) =>
+            c
+              .map((_) => (_.id === data.id ? { ..._, ...data } : _))
+              .sort((a, b) => b.initiative - a.initiative)
+          );
+        }
+        closeEditParticipant();
+      },
+    });
 
   if (!battle) return <h1>Battle not found</h1>;
 
@@ -51,7 +113,14 @@ export default function BattlePage(
               battleEntity.entity ? (
                 <tr key={battleEntity.id}>
                   <td>
-                    <Anchor>Edit</Anchor>
+                    <Anchor
+                      onClick={() => {
+                        editParticipantForm.setValues(battleEntity);
+                        openEditParticipant();
+                      }}
+                    >
+                      Edit
+                    </Anchor>
                   </td>
                   <td>{battleEntity.initiative}</td>
                   <td>{battleEntity.entity.name}</td>
@@ -69,6 +138,47 @@ export default function BattlePage(
           </tbody>
         </Table>
       </Box>
+
+      <Drawer opened={showEditParticipant} onClose={closeEditParticipant}>
+        <Box pos="relative">
+          <LoadingOverlay visible={isUpdatingParticipant} />
+          <form
+            onSubmit={editParticipantForm.onSubmit((val) =>
+              updateParticipant(val)
+            )}
+          >
+            <Stack>
+              <TextInput
+                label="Name"
+                disabled
+                value={editParticipantForm.values.entity.name}
+              />
+
+              <NumberInput
+                label="Initiative"
+                {...editParticipantForm.getInputProps("initiative")}
+              />
+
+              <Select
+                label="Status"
+                value={editParticipantForm.values.status}
+                data={["alive", "prone", "dead"]}
+                onChange={(val) => {
+                  if (val !== null) {
+                    editParticipantForm.setFieldValue("status", val);
+                  }
+                }}
+              />
+
+              <Button type="submit">Save</Button>
+
+              <Button onClick={closeEditParticipant} color="gray">
+                Cancel
+              </Button>
+            </Stack>
+          </form>
+        </Box>
+      </Drawer>
     </div>
   );
 }
@@ -105,12 +215,13 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
       })
     );
     type BattleEntity = BattleParticipant & {
-      entity: Player | Npc | Monster | null;
+      entity: Player | Npc | Monster;
     };
     const battleEntities: BattleEntity[] = [];
     entityData
       .filter((val) => !!val)
       .forEach((entity, index) => {
+        if (entity === null) return;
         battleEntities.push({ ...participants[index], entity });
       });
     return {

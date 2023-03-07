@@ -1,6 +1,6 @@
 import { GetServerSidePropsContext, InferGetServerSidePropsType } from "next";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   Anchor,
@@ -12,6 +12,7 @@ import {
   LoadingOverlay,
   NumberInput,
   Select,
+  Space,
   Stack,
   Table,
   Text,
@@ -56,9 +57,9 @@ export default function BattlePage(
       status: "alive",
       damageTaken: 0,
       entityId: "1",
-      entityType: "",
+      entityType: "npc",
       entity: {
-        name: "Sal",
+        name: "",
       },
     },
     validate: {
@@ -70,8 +71,7 @@ export default function BattlePage(
   });
   const { mutate: updateParticipant, isLoading: isUpdatingParticipant } =
     trpc.battleParticipant.update.useMutation({
-      onSettled(data, error, variables) {
-        console.log("update? participant", { data, error, variables });
+      onSettled(data, error) {
         if (error) return;
         if (data) {
           setBattleEntities((c) =>
@@ -83,6 +83,60 @@ export default function BattlePage(
         closeEditParticipant();
       },
     });
+
+  const [
+    showCreateParticipant,
+    { open: openAddPlayerOrNPC, close: closeCreateParticipant },
+  ] = useDisclosure(false);
+  const createParticipantForm = useForm({
+    initialValues: {
+      battleId: battle?.id,
+      initiative: 0,
+      status: "alive",
+      damageTaken: 0,
+      entityId: "1",
+      entityType: "npc",
+    },
+    validate: {
+      initiative: (val) =>
+        z.number().safeParse(val).success ? null : "Too low",
+      damageTaken: (val) =>
+        z.number().safeParse(val).success ? null : "Too low",
+    },
+  });
+  const { mutate: createParticipant, isLoading: isCreatingParticipant } =
+    trpc.battleParticipant.add.useMutation({
+      onSettled(data, error) {
+        if (error) return;
+        if (data) {
+          setBattleEntities((c) => {
+            if (data.entity !== null) {
+              c.push(data);
+            }
+            return c.sort((a, b) => b.initiative - a.initiative);
+          });
+        }
+        closeCreateParticipant();
+      },
+    });
+
+  const playerOptions = useMemo(() => {
+    return props.players
+      .map((p) => ({
+        label: p.name,
+        value: p.id,
+      }))
+      .filter((p) => !props.battleEntities.find((e) => e.entityId === p.value));
+  }, [props.players, battleEntities]);
+
+  const npcOptions = useMemo(() => {
+    return props.npcs
+      .map((p) => ({
+        label: p.name,
+        value: p.id,
+      }))
+      .filter((p) => !props.battleEntities.find((e) => e.entityId === p.value));
+  }, [props.npcs, battleEntities]);
 
   if (!battle) return <h1>Battle not found</h1>;
 
@@ -137,6 +191,10 @@ export default function BattlePage(
             )}
           </tbody>
         </Table>
+
+        <Space h="md" />
+
+        <Button onClick={openAddPlayerOrNPC}>Add a Player/NPC</Button>
       </Box>
 
       <Drawer opened={showEditParticipant} onClose={closeEditParticipant}>
@@ -162,7 +220,7 @@ export default function BattlePage(
               <Select
                 label="Status"
                 value={editParticipantForm.values.status}
-                data={["alive", "prone", "dead"]}
+                data={["alive" as const, "prone" as const, "dead" as const]}
                 onChange={(val) => {
                   if (val !== null) {
                     editParticipantForm.setFieldValue("status", val);
@@ -179,6 +237,78 @@ export default function BattlePage(
           </form>
         </Box>
       </Drawer>
+
+      <Drawer
+        opened={showCreateParticipant}
+        onClose={() => {
+          closeCreateParticipant();
+          createParticipantForm.reset();
+        }}
+      >
+        <Box pos="relative">
+          <LoadingOverlay visible={isCreatingParticipant} />
+          <form
+            onSubmit={createParticipantForm.onSubmit((vals) =>
+              createParticipant(vals)
+            )}
+          >
+            <Stack>
+              {/*
+          need to show an entity search .. which will filter by Player or NPC ... or needs to allow the creation of a monster! maybe that last part can be a separate form ..
+         */}
+              <Select
+                label="Player"
+                data={playerOptions}
+                onChange={(val) => {
+                  if (val) {
+                    createParticipantForm.setFieldValue("entityType", "player");
+                    createParticipantForm.setFieldValue("entityId", val);
+                  }
+                }}
+              />
+
+              <Select
+                label="NPC"
+                data={npcOptions}
+                onChange={(val) => {
+                  if (val) {
+                    createParticipantForm.setFieldValue("entityType", "npc");
+                    createParticipantForm.setFieldValue("entityId", val);
+                  }
+                }}
+              />
+
+              <NumberInput
+                label="Initiative"
+                {...createParticipantForm.getInputProps("initiative")}
+              />
+
+              <Select
+                label="Status"
+                value={createParticipantForm.values.status}
+                data={["alive" as const, "prone" as const, "dead" as const]}
+                onChange={(val) => {
+                  if (val !== null) {
+                    createParticipantForm.setFieldValue("status", val);
+                  }
+                }}
+              />
+
+              <Button type="submit">Save</Button>
+
+              <Button
+                onClick={() => {
+                  closeCreateParticipant();
+                  createParticipantForm.reset();
+                }}
+                color="gray"
+              >
+                Cancel
+              </Button>
+            </Stack>
+          </form>
+        </Box>
+      </Drawer>
     </div>
   );
 }
@@ -189,6 +319,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
 
   const battleId = context.query.battle_id as string;
   try {
+    const campaignId = context.query.id as string;
     const battle = await prisma.battle.findUnique({
       where: { id: battleId },
     });
@@ -224,10 +355,14 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
         if (entity === null) return;
         battleEntities.push({ ...participants[index], entity });
       });
+    const players = await prisma.player.findMany({ where: { campaignId } });
+    const npcs = await prisma.npc.findMany({ where: { campaignId } });
     return {
       props: {
         battle,
         battleEntities,
+        players,
+        npcs,
       },
     };
   } catch (error) {

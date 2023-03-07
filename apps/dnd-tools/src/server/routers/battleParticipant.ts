@@ -2,7 +2,13 @@
  *
  * This is an example router, you can delete this file and then update `../pages/api/trpc/[trpc].tsx`
  */
-import { Prisma } from "@prisma/client";
+import {
+  BattleParticipant,
+  Monster,
+  Npc,
+  Player,
+  Prisma,
+} from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -104,7 +110,23 @@ export const battleParticipantRouter = router({
         data: input,
         select: defaultSelectBattleParticipant,
       });
-      return participant;
+      if (input.entityType === "npc") {
+        const res = await prisma.npc.findUnique({
+          where: { id: participant.entityId },
+        });
+        return { ...participant, entity: res };
+      } else if (input.entityType === "player") {
+        const res = await prisma.player.findUnique({
+          where: { id: participant.entityId },
+        });
+        return { ...participant, entity: res };
+      } else if (input.entityType === "monster") {
+        const res = await prisma.monster.findUnique({
+          where: { id: participant.entityId },
+        });
+        return { ...participant, entity: res };
+      }
+      return { ...participant, entity: null };
     }),
   delete: publicProcedure
     .input(

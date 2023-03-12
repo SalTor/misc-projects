@@ -9,6 +9,7 @@ import {
   Button,
   Code,
   Drawer,
+  Flex,
   LoadingOverlay,
   NumberInput,
   Select,
@@ -84,6 +85,7 @@ export default function BattlePage(
       },
     });
 
+  const [createType, setCreateType] = useState("npc");
   const [
     showCreateParticipant,
     { open: openAddPlayerOrNPC, close: closeCreateParticipant },
@@ -119,6 +121,20 @@ export default function BattlePage(
         closeCreateParticipant();
       },
     });
+
+  const {
+    mutate: removeEntityFromBattle,
+    isLoading: isRemovingEntityFromBattle,
+  } = trpc.battleParticipant.remove.useMutation({
+    onSettled(data, error, variables) {
+      console.log("remove entity from battle", variables);
+      if (error) return;
+      if (data) {
+        setBattleEntities((c) => c.filter((_) => _.id !== variables.id));
+        closeEditParticipant();
+      }
+    },
+  });
 
   const playerOptions = useMemo(() => {
     return props.players
@@ -194,7 +210,25 @@ export default function BattlePage(
 
         <Space h="md" />
 
-        <Button onClick={openAddPlayerOrNPC}>Add a Player/NPC</Button>
+        <Flex gap="md">
+          <Button
+            onClick={() => {
+              setCreateType("npc");
+              openAddPlayerOrNPC();
+            }}
+          >
+            Add an NPC
+          </Button>
+
+          <Button
+            onClick={() => {
+              setCreateType("player");
+              openAddPlayerOrNPC();
+            }}
+          >
+            Add a Player
+          </Button>
+        </Flex>
       </Box>
 
       <Drawer opened={showEditParticipant} onClose={closeEditParticipant}>
@@ -228,9 +262,28 @@ export default function BattlePage(
                 }}
               />
 
-              <Button type="submit">Save</Button>
+              <Button
+                type="submit"
+                disabled={isRemovingEntityFromBattle || isCreatingParticipant}
+              >
+                Save
+              </Button>
 
-              <Button onClick={closeEditParticipant} color="gray">
+              <Button
+                onClick={() =>
+                  removeEntityFromBattle({ id: editParticipantForm.values.id })
+                }
+                disabled={isRemovingEntityFromBattle || isCreatingParticipant}
+                color="red"
+              >
+                Remove from battle
+              </Button>
+
+              <Button
+                onClick={closeEditParticipant}
+                color="gray"
+                disabled={isRemovingEntityFromBattle || isCreatingParticipant}
+              >
                 Cancel
               </Button>
             </Stack>
@@ -256,27 +309,34 @@ export default function BattlePage(
               {/*
           need to show an entity search .. which will filter by Player or NPC ... or needs to allow the creation of a monster! maybe that last part can be a separate form ..
          */}
-              <Select
-                label="Player"
-                data={playerOptions}
-                onChange={(val) => {
-                  if (val) {
-                    createParticipantForm.setFieldValue("entityType", "player");
-                    createParticipantForm.setFieldValue("entityId", val);
-                  }
-                }}
-              />
+              {createType === "npc" && (
+                <Select
+                  label="NPC"
+                  data={npcOptions}
+                  onChange={(val) => {
+                    if (val) {
+                      createParticipantForm.setFieldValue("entityType", "npc");
+                      createParticipantForm.setFieldValue("entityId", val);
+                    }
+                  }}
+                />
+              )}
 
-              <Select
-                label="NPC"
-                data={npcOptions}
-                onChange={(val) => {
-                  if (val) {
-                    createParticipantForm.setFieldValue("entityType", "npc");
-                    createParticipantForm.setFieldValue("entityId", val);
-                  }
-                }}
-              />
+              {createType === "player" && (
+                <Select
+                  label="Player"
+                  data={playerOptions}
+                  onChange={(val) => {
+                    if (val) {
+                      createParticipantForm.setFieldValue(
+                        "entityType",
+                        "player"
+                      );
+                      createParticipantForm.setFieldValue("entityId", val);
+                    }
+                  }}
+                />
+              )}
 
               <NumberInput
                 label="Initiative"

@@ -94,6 +94,18 @@ export const battleParticipantRouter = router({
       }
       return participants;
     }),
+  remove: publicProcedure
+    .input(
+      z.object({
+        id: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const result = await prisma.battleParticipant.delete({
+        where: { id: input.id },
+      });
+      return result;
+    }),
   add: publicProcedure
     .input(
       z.object({

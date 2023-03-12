@@ -1,6 +1,6 @@
 import { GetServerSidePropsContext, InferGetServerSidePropsType } from "next";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   Anchor,
@@ -36,9 +36,21 @@ import { trpc } from "~/utils/trpc";
 export default function CampaignPage(
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) {
-  const [campaign, setCampaign] = useState(props.campaign);
-
   const router = useRouter();
+
+  const [campaign, setCampaign] = useState(props.campaign);
+  const [activeTab, setActiveTab] = useState(router.query?.tab || "npcs");
+
+  useEffect(() => {
+    router.push(
+      {
+        pathname: router.pathname,
+        query: { tab: activeTab, id: campaign.id },
+      },
+      undefined,
+      { shallow: true }
+    );
+  }, [activeTab]);
 
   const editCampaignForm = useForm({
     initialValues: { id: campaign.id, title: campaign.title },
@@ -96,7 +108,7 @@ export default function CampaignPage(
         <Space h="md" />
 
         {/*TODO: track active tab in url query params*/}
-        <Tabs defaultValue="npcs">
+        <Tabs defaultValue="npcs" value={activeTab} onTabChange={setActiveTab}>
           <Tabs.List>
             <Tabs.Tab value="npcs" icon={<IconRobot />}>
               NPCs

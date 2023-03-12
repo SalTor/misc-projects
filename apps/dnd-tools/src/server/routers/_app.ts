@@ -6,6 +6,7 @@ import { publicProcedure, router } from "../trpc";
 import { battleRouter } from "./battle";
 import { battleParticipantRouter } from "./battleParticipant";
 import { campaignRouter } from "./campaign";
+import { monsterRouter } from "./monster";
 import { npcRouter } from "./npc";
 import { playerRouter } from "./player";
 
@@ -17,6 +18,7 @@ export const appRouter = router({
   player: playerRouter,
   battle: battleRouter,
   battleParticipant: battleParticipantRouter,
+  monster: monsterRouter,
 });
 
 export type AppRouter = typeof appRouter;

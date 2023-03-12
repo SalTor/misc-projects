@@ -147,6 +147,14 @@ export const battleParticipantRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      const participant = await prisma.battleParticipant.findUnique({
+        where: { id: input.id },
+      });
+      if (participant?.entityType === "monster") {
+        await prisma.monster.delete({
+          where: { id: participant.entityId },
+        });
+      }
       const response = await prisma.battleParticipant.delete({
         where: { id: input.id },
       });

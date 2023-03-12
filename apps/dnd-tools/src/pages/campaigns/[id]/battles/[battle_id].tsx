@@ -92,7 +92,7 @@ export default function BattlePage(
   ] = useDisclosure(false);
   const createParticipantForm = useForm({
     initialValues: {
-      battleId: battle?.id,
+      battleId: battle.id,
       initiative: 0,
       status: "alive",
       damageTaken: 0,
@@ -119,6 +119,41 @@ export default function BattlePage(
           });
         }
         closeCreateParticipant();
+      },
+    });
+
+  const [showAddMonster, { open: openAddMonster, close: closeAddMonster }] =
+    useDisclosure(false);
+  const addMonsterForm = useForm({
+    initialValues: {
+      battleId: battle.id,
+      maxHp: 0,
+      name: "",
+      initiative: 0,
+    },
+    validate: {
+      name: (val) =>
+        z.string().min(1).safeParse(val).success ? null : "Too short",
+      maxHp: (val) =>
+        z.number().min(0).safeParse(val).success ? null : "Too low",
+      initiative: (val) =>
+        z.number().min(0).safeParse(val).success ? null : "Too low",
+    },
+  });
+  const { mutate: addMonster, isLoading: isAddingMonster } =
+    trpc.monster.add.useMutation({
+      onSettled(data, error, variables) {
+        console.log("add monster to battle", variables);
+        if (error) return;
+        if (data) {
+          setBattleEntities((c) => {
+            if (data.entity !== null) {
+              c.push(data);
+            }
+            return c.sort((a, b) => b.initiative - a.initiative);
+          });
+          closeAddMonster();
+        }
       },
     });
 
@@ -154,8 +189,6 @@ export default function BattlePage(
       .filter((p) => !props.battleEntities.find((e) => e.entityId === p.value));
   }, [props.npcs, battleEntities]);
 
-  if (!battle) return <h1>Battle not found</h1>;
-
   return (
     <div>
       <Breadcrumbs>
@@ -175,7 +208,7 @@ export default function BattlePage(
               <th>Initiative</th>
               <th>Name</th>
               <th>Status</th>
-              <th>ObjectID</th>
+              <th>Damage taken</th>
             </tr>
           </thead>
           <tbody>
@@ -200,7 +233,7 @@ export default function BattlePage(
                     </Code>
                   </td>
                   <td>
-                    <Code>{battleEntity.entityId}</Code>
+                    <Code>{battleEntity.damageTaken}</Code>
                   </td>
                 </tr>
               ) : null
@@ -228,6 +261,14 @@ export default function BattlePage(
           >
             Add a Player
           </Button>
+
+          <Button
+            onClick={() => {
+              openAddMonster();
+            }}
+          >
+            Add a Monster
+          </Button>
         </Flex>
       </Box>
 
@@ -249,6 +290,11 @@ export default function BattlePage(
               <NumberInput
                 label="Initiative"
                 {...editParticipantForm.getInputProps("initiative")}
+              />
+
+              <NumberInput
+                label="Damage taken"
+                {...editParticipantForm.getInputProps("damageTaken")}
               />
 
               <Select
@@ -369,6 +415,44 @@ export default function BattlePage(
           </form>
         </Box>
       </Drawer>
+
+      <Drawer
+        opened={showAddMonster}
+        onClose={() => {
+          closeAddMonster();
+          addMonsterForm.reset();
+        }}
+      >
+        <Box pos="relative">
+          <LoadingOverlay visible={isCreatingParticipant} />
+          <form onSubmit={addMonsterForm.onSubmit((vals) => addMonster(vals))}>
+            <Stack>
+              <TextInput
+                label="Name"
+                {...addMonsterForm.getInputProps("name")}
+              />
+
+              <NumberInput
+                label="Max HP"
+                {...addMonsterForm.getInputProps("maxHp")}
+              />
+
+              <NumberInput
+                label="Initiative"
+                {...addMonsterForm.getInputProps("initiative")}
+              />
+
+              <Button type="submit" disabled={isAddingMonster}>
+                Add monster
+              </Button>
+
+              <Button onClick={closeAddMonster} disabled={isAddingMonster}>
+                Cancel
+              </Button>
+            </Stack>
+          </form>
+        </Box>
+      </Drawer>
     </div>
   );
 }
@@ -383,6 +467,14 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
     const battle = await prisma.battle.findUnique({
       where: { id: battleId },
     });
+    if (!battle) {
+      return {
+        redirect: {
+          destination: "/campaigns/" + context.query.id,
+        },
+      };
+    }
+
     const participants = await prisma.battleParticipant.findMany({
       where: { battleId },
       orderBy: { initiative: "desc" },
